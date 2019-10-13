@@ -16,75 +16,8 @@ local max_speed = 2.5
 local mp = require 'mp'
 local groupwatch_start = nil
 local syncing = false
+local pausing = false
 local last_correction = 0
-
--- https://stackoverflow.com/a/24037414 --
-local ok,ex = pcall(require,"ex")
-if ok then
-   pcall(ex.install)
-   if ex.sleep and not os.sleep then os.sleep = ex.sleep end
-end
-
-if not os.sleep then
-   local ok,ffi = pcall(require,"ffi")
-   if ok then
-      if not os.sleep then
-         ffi.cdef[[
-            void Sleep(int ms);
-            int poll(struct pollfd *fds,unsigned long nfds,int timeout);
-         ]]
-         if ffi.os == "Windows" then
-            os.sleep = function(sec)
-               ffi.C.Sleep(sec*1000)
-            end
-         else
-            os.sleep = function(sec)
-               ffi.C.poll(nil,0,sec*1000)
-            end
-         end
-      end
-   else
-      local ok,socket = pcall(require,"socket")
-      if not ok then local ok,socket = pcall(require,"luasocket") end
-      if ok then
-         if not os.sleep then
-            os.sleep = function(sec)
-               socket.select(nil,nil,sec)
-            end
-         end
-      else
-         local ok,alien = pcall(require,"alien")
-         if ok then
-            if not os.sleep then
-               if alien.platform == "windows" then
-                  kernel32 = alien.load("kernel32.dll")
-                  local slep = kernel32.Sleep
-                  slep:types{ret="void",abi="stdcall","uint"}
-                  os.sleep = function(sec)
-                     slep(sec*1000)
-                  end
-               else
-                  local pol = alien.default.poll
-                  pol:types('struct', 'unsigned long', 'int')
-                  os.sleep = function(sec)
-                     pol(nil,0,sec*1000)
-                  end
-               end
-            end
-         elseif package.config:match("^\\") then
-            os.sleep = function(sec)
-               local timr = os.time()
-               repeat until os.time() > timr + sec
-            end
-         else
-            os.sleep = function(sec)
-               os.execute("sleep " .. sec)
-            end
-         end
-      end
-   end
-end
--- // https://stackoverflow.com/a/24037414 // --
 
 local function reset_start()
     if syncing then
@@ -93,10 +26,18 @@ local function reset_start()
     end
     groupwatch_start = nil
     syncing = false
+    pausing = false
 end
 
-local function sync_cancel()
+local function sync_cancel(observed)
+    observed = observed or false
     syncing = false
+    if pausing then
+        pausing = false
+        if not observed then
+            mp.set_property_bool("pause", false)
+        end
+    end
     mp.set_property("speed", 1)
     mp.osd_message("[groupwatch_sync] sync canceled")
 end
@@ -106,10 +47,14 @@ local function set_start()
     mp.set_property("speed", 1)
     groupwatch_start = os.time()
     syncing = false
+    pausing = false
     mp.osd_message("[groupwatch_sync] start time set")
 end
 
 local function groupwatch_sync()
+    if pausing then
+        return false
+    end
     if not groupwatch_start then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
@@ -118,9 +63,22 @@ local function groupwatch_sync()
     syncing = true
 end
 
+local function groupwatch_unpause()
+    if not pausing then
+        return false
+    end
+    mp.set_property_bool("pause", false)
+    mp.osd_message("[groupwatch_sync] synced")
+    syncing = false
+    pausing = false
+end
+
 local function groupwatch_observe()
     if not syncing then
         return false
+    end
+    if pausing then
+        return sync_cancel(true)
     end
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - groupwatch_start
@@ -129,9 +87,8 @@ local function groupwatch_observe()
         if not allow_slowdowns then
             mp.osd_message("[groupwatch_sync] syncing...", local_pos - groupwatch_pos)
             mp.set_property_bool("pause", true)
-            os.sleep(local_pos - groupwatch_pos)
-            mp.set_property_bool("pause", false)
-            return mp.osd_message("[groupwatch_sync] synced")
+            pausing = true
+            return mp.add_timeout(local_pos - groupwatch_pos, groupwatch_unpause)
         end
         speed_correction = -speed_decrease
     elseif local_pos >= groupwatch_pos then
@@ -139,6 +96,7 @@ local function groupwatch_observe()
         mp.set_property("speed", 1)
         mp.set_property_bool("pause", false)
         syncing = false
+        pausing = false
         return true
     end
     new_correction = math.ceil(local_pos)
