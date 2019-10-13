@@ -87,6 +87,10 @@ end
 -- // https://stackoverflow.com/a/24037414 // --
 
 local function reset_start()
+    if syncing then
+        mp.set_property("speed", 1)
+        mp.osd_message("[groupwatch_sync] sync canceled")
+    end
     groupwatch_start = nil
     syncing = false
 end
@@ -99,13 +103,14 @@ end
 
 local function set_start()
     mp.set_property_bool("pause", false)
+    mp.set_property("speed", 1)
     groupwatch_start = os.time()
     syncing = false
     mp.osd_message("[groupwatch_sync] start time set")
 end
 
 local function groupwatch_sync()
-    if groupwatch_start == nil then
+    if not groupwatch_start then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
     mp.set_property_bool("pause", false)
@@ -114,7 +119,7 @@ local function groupwatch_sync()
 end
 
 local function groupwatch_observe()
-    if syncing == false then
+    if not syncing then
         return false
     end
     local local_pos = mp.get_property_number("time-pos")
