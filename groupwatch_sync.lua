@@ -84,6 +84,12 @@ local function reset_start()
     syncing = false
 end
 
+local function sync_cancel()
+    syncing = false
+    mp.set_property("speed", 1)
+    mp.osd_message("[groupwatch_sync] sync canceled")
+end
+
 local function set_start()
     mp.set_property_bool("pause", false)
     groupwatch_start = os.time()
@@ -123,7 +129,7 @@ local function groupwatch_observe()
         syncing = false
         return true
     end
-    local new_speed = math.max(.2, math.min(mp.get_property_number("speed") + speed_correction, 3))
+    local new_speed = math.max(.2, math.min(mp.get_property_number("speed") + speed_correction, 2.5))
     mp.set_property("speed", new_speed)
     mp.osd_message("[groupwatch_sync] syncing...")
     syncing = true
@@ -132,4 +138,5 @@ end
 mp.register_event("start-file", reset_start)
 mp.add_forced_key_binding("K", "groupwatch_start", set_start)
 mp.add_forced_key_binding("k", "groupwatch_sync", groupwatch_sync)
+mp.add_forced_key_binding("Ctrl+k", "groupwatch_cancel", sync_cancel)
 mp.observe_property("time-pos", "native", groupwatch_observe)
