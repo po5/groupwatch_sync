@@ -14,17 +14,17 @@ local max_speed = 2.5
 
 -----------------------
 local mp = require 'mp'
-local groupwatch_start = nil
+local start = nil
 local syncing = false
 local pausing = false
 local last_correction = 0
 
-local function reset_start()
+local function groupwatch_reset()
     if syncing then
         mp.set_property("speed", 1)
         mp.osd_message("[groupwatch_sync] sync canceled")
     end
-    groupwatch_start = nil
+    start = nil
     syncing = false
     pausing = false
 end
@@ -42,20 +42,20 @@ local function sync_cancel(observed)
     mp.osd_message("[groupwatch_sync] sync canceled")
 end
 
-local function set_start()
+local function groupwatch_start()
     mp.set_property_bool("pause", false)
     mp.set_property("speed", 1)
-    groupwatch_start = os.time()
+    start = os.time()
     syncing = false
     pausing = false
     mp.osd_message("[groupwatch_sync] start time set")
 end
 
 local function groupwatch_sync()
-    if pausing then
-        return false
+    if syncing or pausing then
+        return sync_cancel()
     end
-    if not groupwatch_start then
+    if not start then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
     mp.set_property_bool("pause", false)
@@ -81,7 +81,7 @@ local function groupwatch_observe()
         return sync_cancel(true)
     end
     local local_pos = mp.get_property_number("time-pos")
-    local groupwatch_pos = os.time() - groupwatch_start
+    local groupwatch_pos = os.time() - start
     local speed_correction = speed_increase
     if local_pos >= groupwatch_pos + 2 then
         if not allow_slowdowns then
@@ -108,8 +108,7 @@ local function groupwatch_observe()
     mp.osd_message("[groupwatch_sync] syncing...")
 end
 
-mp.register_event("start-file", reset_start)
-mp.add_forced_key_binding("K", "groupwatch_start", set_start)
+mp.register_event("start-file", groupwatch_reset)
+mp.add_forced_key_binding("K", "groupwatch_start", groupwatch_start)
 mp.add_forced_key_binding("k", "groupwatch_sync", groupwatch_sync)
-mp.add_forced_key_binding("Ctrl+k", "groupwatch_cancel", sync_cancel)
 mp.observe_property("time-pos", "native", groupwatch_observe)
