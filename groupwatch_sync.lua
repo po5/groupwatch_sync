@@ -114,7 +114,6 @@ local function groupwatch_sync()
 end
 
 local function groupwatch_observe()
-    print(mp.get_property_number("speed"))
     if syncing == false then
         return false
     end
@@ -144,7 +143,6 @@ local function groupwatch_observe()
         mp.set_property("speed", new_speed)
     end
     mp.osd_message("[groupwatch_sync] syncing...")
-    syncing = true
 end
 
 mp.register_event("start-file", reset_start)
