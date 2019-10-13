@@ -5,10 +5,11 @@
 -- This script speeds up or slows down videos to
 -- get back in sync with a group watch.
 -- Define a start time with Shift+K and sync with K.
-local allow_slowdowns = false -- if true, slows down playback instead of pausing when ahead
+local allow_slowdowns = true -- if true, slows down playback instead of pausing when ahead
 local speed_increase = .2
 local speed_decrease = .2
-local speed_cap = 2.5 -- fast forward speed cap
+local min_speed = .25
+local max_speed = 2.5
 
 
 -----------------------
@@ -139,7 +140,7 @@ local function groupwatch_observe()
     new_correction = math.ceil(local_pos)
     if new_correction ~= last_correction then
         last_correction = new_correction
-        local new_speed = math.max(speed_increase, math.min(mp.get_property_number("speed") + speed_correction, speed_cap))
+        local new_speed = math.max(min_speed, math.min(mp.get_property_number("speed") + speed_correction, max_speed))
         mp.set_property("speed", new_speed)
     end
     mp.osd_message("[groupwatch_sync] syncing...")
