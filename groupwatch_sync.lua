@@ -85,7 +85,7 @@ local function reset_start()
 end
 
 local function set_start()
-    mp.set_property_bool('pause', false)
+    mp.set_property_bool("pause", false)
     groupwatch_start = os.time()
     syncing = false
     mp.osd_message("[groupwatch_sync] start time set")
@@ -95,7 +95,7 @@ local function groupwatch_sync()
     if groupwatch_start == nil then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
-    mp.set_property_bool('pause', false)
+    mp.set_property_bool("pause", false)
     mp.osd_message("[groupwatch_sync] syncing")
     syncing = true
 end
@@ -110,16 +110,16 @@ local function groupwatch_observe()
     if local_pos >= groupwatch_pos + 2 then
         if not allow_slowdowns then
             mp.osd_message("[groupwatch_sync] syncing...", local_pos - groupwatch_pos)
-            mp.set_property_bool('pause', true)
+            mp.set_property_bool("pause", true)
             os.sleep(local_pos - groupwatch_pos)
-            mp.set_property_bool('pause', false)
+            mp.set_property_bool("pause", false)
             return mp.osd_message("[groupwatch_sync] synced")
         end
         speed_correction = -.2
     elseif local_pos >= groupwatch_pos then
         mp.osd_message("[groupwatch_sync] synced")
         mp.set_property("speed", 1)
-        mp.set_property_bool('pause', false)
+        mp.set_property_bool("pause", false)
         syncing = false
         return true
     end
