@@ -5,11 +5,17 @@
 -- This script speeds up or slows down videos to
 -- get back in sync with a group watch.
 -- Define a start time with Shift+K and sync with K.
+local allow_slowdowns = false -- if true, slows down playback instead of pausing when ahead
+local speed_increase = .2
+local speed_decrease = .2
+local speed_cap = 2.5 -- fast forward speed cap
 
+
+-----------------------
 local mp = require 'mp'
 local groupwatch_start = nil
 local syncing = false
-local allow_slowdowns = false
+local last_correction = 0
 
 -- https://stackoverflow.com/a/24037414 --
 local ok,ex = pcall(require,"ex")
@@ -107,12 +113,13 @@ local function groupwatch_sync()
 end
 
 local function groupwatch_observe()
+    print(mp.get_property_number("speed"))
     if syncing == false then
         return false
     end
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - groupwatch_start
-    local speed_correction = .2
+    local speed_correction = speed_increase
     if local_pos >= groupwatch_pos + 2 then
         if not allow_slowdowns then
             mp.osd_message("[groupwatch_sync] syncing...", local_pos - groupwatch_pos)
@@ -121,7 +128,7 @@ local function groupwatch_observe()
             mp.set_property_bool("pause", false)
             return mp.osd_message("[groupwatch_sync] synced")
         end
-        speed_correction = -.2
+        speed_correction = -speed_decrease
     elseif local_pos >= groupwatch_pos then
         mp.osd_message("[groupwatch_sync] synced")
         mp.set_property("speed", 1)
@@ -129,8 +136,12 @@ local function groupwatch_observe()
         syncing = false
         return true
     end
-    local new_speed = math.max(.2, math.min(mp.get_property_number("speed") + speed_correction, 2.5))
-    mp.set_property("speed", new_speed)
+    new_correction = math.ceil(local_pos)
+    if new_correction ~= last_correction then
+        last_correction = new_correction
+        local new_speed = math.max(speed_increase, math.min(mp.get_property_number("speed") + speed_correction, speed_cap))
+        mp.set_property("speed", new_speed)
+    end
     mp.osd_message("[groupwatch_sync] syncing...")
     syncing = true
 end
