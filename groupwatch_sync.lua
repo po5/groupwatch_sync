@@ -5,7 +5,7 @@
 -- This script speeds up or slows down videos to
 -- get back in sync with a group watch.
 -- Define a start time with Shift+K and sync with K.
-local allow_slowdowns = true -- if true, slows down playback instead of pausing when ahead
+local allow_slowdowns = false -- if true, slows down playback instead of pausing when ahead
 local speed_increase = .2
 local speed_decrease = .2
 local min_speed = .25
