@@ -42,13 +42,18 @@ local function sync_cancel(observed)
     mp.osd_message("[groupwatch_sync] sync canceled")
 end
 
-local function groupwatch_start()
+local function groupwatch_start(from)
+    from = from or 0
     mp.set_property_bool("pause", false)
     mp.set_property("speed", 1)
-    start = os.time()
+    start = os.time() - from
     syncing = false
     pausing = false
     mp.osd_message("[groupwatch_sync] start time set")
+end
+
+local function groupwatch_start_from()
+    groupwatch_start(mp.get_property_number("time-pos"))
 end
 
 local function groupwatch_sync()
@@ -61,12 +66,7 @@ local function groupwatch_sync()
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
     mp.set_property_bool("pause", false)
-    if math.abs(groupwatch_pos - local_pos) > .8 then
-        mp.osd_message("[groupwatch_sync] syncing")
-        syncing = true
-    else
-        mp.osd_message("[groupwatch_sync] already synced")
-    end
+    syncing = true
 end
 
 local function groupwatch_unpause()
@@ -88,6 +88,13 @@ local function groupwatch_observe()
     end
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
+    if math.abs(groupwatch_pos - local_pos) < .8 then
+        mp.osd_message("[groupwatch_sync] synced")
+        mp.set_property("speed", 1)
+        syncing = false
+        pausing = false
+        return true
+    end
     local speed_correction = speed_increase
     if local_pos >= groupwatch_pos + .8 then
         if not allow_slowdowns then
@@ -97,13 +104,6 @@ local function groupwatch_observe()
             return mp.add_timeout(local_pos - groupwatch_pos, groupwatch_unpause)
         end
         speed_correction = -speed_decrease
-    elseif local_pos >= groupwatch_pos then
-        mp.osd_message("[groupwatch_sync] synced")
-        mp.set_property("speed", 1)
-        mp.set_property_bool("pause", false)
-        syncing = false
-        pausing = false
-        return true
     end
     new_correction = math.ceil(local_pos)
     if new_correction ~= last_correction then
@@ -115,6 +115,7 @@ local function groupwatch_observe()
 end
 
 mp.register_event("start-file", groupwatch_reset)
+mp.add_forced_key_binding("Ctrl+k", "groupwatch_start_from", groupwatch_start_from)
 mp.add_forced_key_binding("K", "groupwatch_start", groupwatch_start)
 mp.add_forced_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.observe_property("time-pos", "native", groupwatch_observe)
