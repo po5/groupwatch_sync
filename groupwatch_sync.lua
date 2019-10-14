@@ -58,9 +58,15 @@ local function groupwatch_sync()
     if not start then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
+    local local_pos = mp.get_property_number("time-pos")
+    local groupwatch_pos = os.time() - start
     mp.set_property_bool("pause", false)
-    mp.osd_message("[groupwatch_sync] syncing")
-    syncing = true
+    if math.abs(groupwatch_pos - local_pos) > .8 then
+        mp.osd_message("[groupwatch_sync] syncing")
+        syncing = true
+    else
+        mp.osd_message("[groupwatch_sync] already synced")
+    end
 end
 
 local function groupwatch_unpause()
@@ -83,7 +89,8 @@ local function groupwatch_observe()
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
     local speed_correction = speed_increase
-    if local_pos >= groupwatch_pos + 2 then
+    print(mp.get_property_number("speed"))
+    if local_pos >= groupwatch_pos + .8 then
         if not allow_slowdowns then
             mp.osd_message("[groupwatch_sync] syncing...", local_pos - groupwatch_pos)
             mp.set_property_bool("pause", true)
