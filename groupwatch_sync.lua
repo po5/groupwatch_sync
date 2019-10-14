@@ -89,7 +89,6 @@ local function groupwatch_observe()
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
     local speed_correction = speed_increase
-    print(mp.get_property_number("speed"))
     if local_pos >= groupwatch_pos + .8 then
         if not allow_slowdowns then
             mp.osd_message("[groupwatch_sync] syncing...", local_pos - groupwatch_pos)
