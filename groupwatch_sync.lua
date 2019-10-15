@@ -78,8 +78,6 @@ local function groupwatch_sync()
     if not start then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
-    local local_pos = mp.get_property_number("time-pos")
-    local groupwatch_pos = os.time() - start
     if mp.get_property_bool("pause") then
         mp.set_property_bool("pause", false)
     end
