@@ -29,40 +29,34 @@ local expect_jump = false
 mp.options = require 'mp.options'
 mp.options.read_options(options, "groupwatch_sync")
 
-local function groupwatch_reset()
-    if syncing then
-        mp.set_property("speed", 1)
-        mp.osd_message("[groupwatch_sync] sync canceled")
+local function sync_cancel(quiet, observed)
+    observed = observed or false
+    print(pausing, observed)
+    if pausing and not observed then
+        mp.set_property_bool("pause", false)
     end
-    start = nil
+    if not syncing then
+        return false
+    end
     syncing = false
     pausing = false
+    quiet = quiet or false
+    mp.set_property("speed", 1)
+    if not quiet then
+        mp.osd_message("[groupwatch_sync] sync canceled")
+    end
 end
 
-local function sync_cancel(observed)
-    observed = observed or false
-    syncing = false
-    if pausing then
-        pausing = false
-        if not observed then
-            if mp.get_property_bool("pause") then
-                mp.set_property_bool("pause", false)
-            end
-        end
-    end
-    mp.set_property("speed", 1)
-    mp.osd_message("[groupwatch_sync] sync canceled")
+local function groupwatch_reset()
+    start = nil
+    sync_cancel()
 end
 
 local function groupwatch_start(from)
     from = from or 0
-    if mp.get_property_bool("pause") then
-        mp.set_property_bool("pause", false)
-    end
-    mp.set_property("speed", 1)
+    mp.set_property_bool("pause", false)
+    sync_cancel()
     start = os.time() - from
-    syncing = false
-    pausing = false
     mp.osd_message("[groupwatch_sync] start time set")
 end
 
@@ -72,30 +66,22 @@ end
 
 local function groupwatch_sync()
     expect_jump = false
-    if syncing or pausing then
+    if syncing then
         return sync_cancel()
-    end
-    if not start then
+    elseif not start then
         return mp.osd_message("[groupwatch_sync] no start time set")
     end
-    if mp.get_property_bool("pause") then
-        mp.set_property_bool("pause", false)
-    end
+    mp.set_property_bool("pause", false)
     syncing = true
 end
 
 local function groupwatch_unpause()
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
-    if not pausing or math.abs(groupwatch_pos - local_pos) > .8 then
-        return false
+    if pausing and math.abs(groupwatch_pos - local_pos) < .8 then
+        sync_cancel(true)
+        mp.osd_message("[groupwatch_sync] synced")
     end
-    if mp.get_property_bool("pause") then
-        mp.set_property_bool("pause", false)
-    end
-    mp.osd_message("[groupwatch_sync] synced")
-    syncing = false
-    pausing = false
 end
 
 local function groupwatch_observe()
@@ -103,16 +89,13 @@ local function groupwatch_observe()
         return false
     end
     if pausing then
-        return sync_cancel(true)
+        return sync_cancel(false, true)
     end
     local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
     if math.abs(groupwatch_pos - local_pos) < .8 then
-        mp.osd_message("[groupwatch_sync] synced")
-        mp.set_property("speed", 1)
-        syncing = false
-        pausing = false
-        return true
+        sync_cancel(true)
+        return mp.osd_message("[groupwatch_sync] synced")
     end
     local speed_correction = options.speed_increase
     if local_pos >= groupwatch_pos + .8 then
@@ -121,10 +104,7 @@ local function groupwatch_observe()
                 return sync_cancel()
             end
             mp.osd_message("[groupwatch_sync] syncing... (pause)", local_pos - groupwatch_pos)
-            mp.set_property("speed", 1)
-            if not mp.get_property_bool("pause") then
-                mp.set_property_bool("pause", true)
-            end
+            mp.set_property_bool("pause", true)
             pausing = true
             return mp.add_timeout(local_pos - groupwatch_pos, groupwatch_unpause)
         end
