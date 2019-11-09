@@ -31,7 +31,6 @@ mp.options.read_options(options, "groupwatch_sync")
 
 local function sync_cancel(quiet, observed)
     observed = observed or false
-    print(pausing, observed)
     if pausing and not observed then
         mp.set_property_bool("pause", false)
     end
