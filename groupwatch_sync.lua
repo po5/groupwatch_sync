@@ -19,14 +19,14 @@ local options = {
     max_speed = 2.5,
 }
 
-local mp = require 'mp'
+local mp = require "mp"
 local start = nil
 local syncing = false
 local pausing = false
 local last_correction = 0
 local expect_jump = false
 
-mp.options = require 'mp.options'
+mp.options = require "mp.options"
 mp.options.read_options(options, "groupwatch_sync")
 
 local function sync_cancel(quiet, observed)
@@ -83,14 +83,13 @@ local function groupwatch_unpause()
     end
 end
 
-local function groupwatch_observe()
+local function groupwatch_observe(name, local_pos)
     if not syncing then
         return false
     end
     if pausing then
         return sync_cancel(false, true)
     end
-    local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = os.time() - start
     if math.abs(groupwatch_pos - local_pos) < .8 then
         sync_cancel(true)
