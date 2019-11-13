@@ -17,6 +17,9 @@ local options = {
     -- Playback speed cap
     min_speed = .25,
     max_speed = 2.5,
+
+    -- Reset playback speed to 1x when subtitles are displayed
+    subs_reset_speed = false
 }
 
 local mp = require "mp"
@@ -25,12 +28,12 @@ local syncing = false
 local pausing = false
 local last_correction = 0
 local expect_jump = false
+local reset = false
 
 mp.options = require "mp.options"
 mp.options.read_options(options, "groupwatch_sync")
 
 local function sync_cancel(quiet, observed)
-    observed = observed or false
     if pausing and not observed then
         mp.set_property_bool("pause", false)
     end
@@ -39,7 +42,6 @@ local function sync_cancel(quiet, observed)
     end
     syncing = false
     pausing = false
-    quiet = quiet or false
     mp.set_property("speed", 1)
     if not quiet then
         mp.osd_message("[groupwatch_sync] sync canceled")
@@ -76,6 +78,7 @@ end
 
 local function groupwatch_unpause()
     local local_pos = mp.get_property_number("time-pos")
+    if not start then return sync_cancel(true) end
     local groupwatch_pos = os.time() - start
     if pausing and math.abs(groupwatch_pos - local_pos) < .8 then
         sync_cancel(true)
@@ -84,6 +87,7 @@ local function groupwatch_unpause()
 end
 
 local function groupwatch_observe(name, local_pos)
+    if local_pos == nil then return end
     if not syncing then
         return false
     end
@@ -108,8 +112,19 @@ local function groupwatch_observe(name, local_pos)
         end
         speed_correction = -options.speed_decrease
     end
+    if options.subs_reset_speed then
+        local subtitle = mp.get_property("sub-text")
+        if subtitle ~= "" and subtitle ~= nil then
+            if not reset then
+                mp.set_property("speed", 1)
+            end
+            reset = true
+        else
+            reset = false
+        end
+    end
     new_correction = math.ceil(local_pos)
-    if new_correction ~= last_correction then
+    if new_correction ~= last_correction and not reset then
         last_correction = new_correction
         local new_speed = math.max(options.min_speed, math.min(mp.get_property_number("speed") + speed_correction, options.max_speed))
         mp.set_property("speed", new_speed)
