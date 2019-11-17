@@ -22,7 +22,6 @@ local options = {
     subs_reset_speed = false
 }
 
-local mp = require "mp"
 local start = nil
 local syncing = false
 local pausing = false
@@ -57,7 +56,7 @@ local function groupwatch_start(from)
     from = from or 0
     mp.set_property_bool("pause", false)
     sync_cancel()
-    start = os.time() - from
+    start = mp.get_time() - from
     mp.osd_message("[groupwatch_sync] start time set")
 end
 
@@ -79,8 +78,8 @@ end
 local function groupwatch_unpause()
     local local_pos = mp.get_property_number("time-pos")
     if not start then return sync_cancel(true) end
-    local groupwatch_pos = os.time() - start
-    if pausing and math.abs(groupwatch_pos - local_pos) < .8 then
+    local groupwatch_pos = mp.get_time() - start
+    if pausing and math.abs(groupwatch_pos - local_pos) < .1 then
         sync_cancel(true)
         mp.osd_message("[groupwatch_sync] synced")
     end
@@ -94,13 +93,13 @@ local function groupwatch_observe(name, local_pos)
     if pausing then
         return sync_cancel(false, true)
     end
-    local groupwatch_pos = os.time() - start
-    if math.abs(groupwatch_pos - local_pos) < .8 then
+    local groupwatch_pos = mp.get_time() - start
+    if math.abs(groupwatch_pos - local_pos) < .1 then
         sync_cancel(true)
         return mp.osd_message("[groupwatch_sync] synced")
     end
     local speed_correction = options.speed_increase
-    if local_pos >= groupwatch_pos + .8 then
+    if local_pos >= groupwatch_pos + .1 then
         if not options.allow_slowdowns then
             if expect_jump then
                 return sync_cancel()
@@ -134,7 +133,7 @@ local function groupwatch_observe(name, local_pos)
 end
 
 mp.register_event("start-file", groupwatch_reset)
-mp.add_forced_key_binding("Ctrl+k", "groupwatch_start_here", groupwatch_start_here)
-mp.add_forced_key_binding("K", "groupwatch_start", groupwatch_start)
-mp.add_forced_key_binding("k", "groupwatch_sync", groupwatch_sync)
+mp.add_key_binding("Ctrl+k", "groupwatch_start_here", groupwatch_start_here)
+mp.add_key_binding("K", "groupwatch_start", groupwatch_start)
+mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.observe_property("time-pos", "native", groupwatch_observe)
