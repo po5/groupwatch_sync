@@ -11,11 +11,11 @@ local options = {
     allow_slowdowns = false,
 	
     -- Playback speed modifier when syncing, applied once every second until cap is reached
-    speed_increase = .2,
-    speed_decrease = .2,
+    speed_increase = 0.2,
+    speed_decrease = 0.2,
 
     -- Playback speed cap
-    min_speed = .25,
+    min_speed = 0.25,
     max_speed = 2.5,
 
     -- Reset playback speed to 1x when subtitles are displayed
@@ -79,7 +79,7 @@ local function groupwatch_unpause()
     local local_pos = mp.get_property_number("time-pos")
     if not start then return sync_cancel(true) end
     local groupwatch_pos = mp.get_time() - start
-    if pausing and math.abs(groupwatch_pos - local_pos) < .1 then
+    if pausing and math.abs(groupwatch_pos - local_pos) < 0.1 then
         sync_cancel(true)
         mp.osd_message("[groupwatch_sync] synced")
     end
@@ -94,12 +94,12 @@ local function groupwatch_observe(name, local_pos)
         return sync_cancel(false, true)
     end
     local groupwatch_pos = mp.get_time() - start
-    if math.abs(groupwatch_pos - local_pos) < .1 then
+    if math.abs(groupwatch_pos - local_pos) < 0.1 then
         sync_cancel(true)
         return mp.osd_message("[groupwatch_sync] synced")
     end
     local speed_correction = options.speed_increase
-    if local_pos >= groupwatch_pos + .1 then
+    if local_pos >= groupwatch_pos + 0.1 then
         if not options.allow_slowdowns then
             if expect_jump then
                 return sync_cancel()
@@ -112,8 +112,7 @@ local function groupwatch_observe(name, local_pos)
         speed_correction = -options.speed_decrease
     end
     if options.subs_reset_speed then
-        local subtitle = mp.get_property("sub-text")
-        if subtitle ~= "" and subtitle ~= nil then
+        if mp.get_property("sub-start") ~= nil then
             if not reset then
                 mp.set_property("speed", 1)
             end
