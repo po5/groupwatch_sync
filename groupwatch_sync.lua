@@ -26,6 +26,7 @@ local start = nil
 local syncing = false
 local pausing = false
 local last_correction = 0
+local last_pos = nil
 local expect_jump = false
 local reset = false
 
@@ -64,22 +65,11 @@ local function groupwatch_start_here()
     groupwatch_start(mp.get_property_number("time-pos"))
 end
 
-local function groupwatch_sync()
-    expect_jump = false
-    if syncing then
-        return sync_cancel()
-    elseif not start then
-        return mp.osd_message("[groupwatch_sync] no start time set")
-    end
-    mp.set_property_bool("pause", false)
-    syncing = true
-end
-
 local function groupwatch_unpause()
-    local local_pos = mp.get_property_number("time-pos")
     if not start then return sync_cancel(true) end
+    local local_pos = mp.get_property_number("time-pos")
     local groupwatch_pos = mp.get_time() - start
-    if pausing and math.abs(groupwatch_pos - local_pos) < 0.1 then
+    if pausing and math.abs(groupwatch_pos - local_pos) < 0.4 then
         sync_cancel(true)
         mp.osd_message("[groupwatch_sync] synced")
     end
@@ -91,10 +81,14 @@ local function groupwatch_observe(name, local_pos)
         return false
     end
     if pausing then
-        return sync_cancel(false, true)
+        if last_pos ~= local_pos then
+            return sync_cancel(false, true)
+        else
+            return
+        end
     end
     local groupwatch_pos = mp.get_time() - start
-    if math.abs(groupwatch_pos - local_pos) < 0.1 then
+    if math.abs(groupwatch_pos - local_pos) < 0.2 then
         sync_cancel(true)
         return mp.osd_message("[groupwatch_sync] synced")
     end
@@ -107,9 +101,13 @@ local function groupwatch_observe(name, local_pos)
             mp.osd_message("[groupwatch_sync] syncing... (pause)", local_pos - groupwatch_pos)
             mp.set_property_bool("pause", true)
             pausing = true
+            last_pos = local_pos
             return mp.add_timeout(local_pos - groupwatch_pos, groupwatch_unpause)
         end
         speed_correction = -options.speed_decrease
+    end
+    if name == "manual" then
+        mp.set_property_bool("pause", false)
     end
     if options.subs_reset_speed then
         if mp.get_property("sub-start") ~= nil then
@@ -129,6 +127,17 @@ local function groupwatch_observe(name, local_pos)
     end
     mp.osd_message("[groupwatch_sync] syncing... (speed correction)")
     expect_jump = true
+end
+
+local function groupwatch_sync()
+    expect_jump = false
+    if syncing then
+        return sync_cancel()
+    elseif not start then
+        return mp.osd_message("[groupwatch_sync] no start time set")
+    end
+    syncing = true
+    groupwatch_observe("manual", mp.get_property_number("time-pos"))
 end
 
 mp.register_event("start-file", groupwatch_reset)
