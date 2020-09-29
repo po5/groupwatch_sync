@@ -34,8 +34,8 @@ If ahead:
 - `allow_slowdowns=no` (default): Playback is paused until group position reaches playback position.
 - `allow_slowdowns=yes`: Playback is unpaused and speed is decreased every second by `speed_decrease` until `min_speed` is reached or group position reaches playback position.
 - Unpausing and seeking *will* interrupt syncing.
-- Manually cancelling the current sync will unpause playback.
+- Explicitly cancelling the current sync will unpause playback.
 
 In both cases:
 - `subs_reset_speed=yes`: Playback speed goes back to 1 when a subtitle is displayed then resumes speed increase/decrease.
-- Pressing the `groupwatch_sync` key again will cancel the current sync.
+- Pressing the `groupwatch_sync` key again will cancel the current sync ("explicitly cancelling" refers to this).
