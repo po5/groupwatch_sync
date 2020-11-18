@@ -39,3 +39,6 @@ If ahead:
 In both cases:
 - `subs_reset_speed=yes`: Playback speed goes back to 1 when a subtitle is displayed then resumes speed increase/decrease.
 - Pressing the `groupwatch_sync` key again will cancel the current sync ("explicitly cancelling" refers to this).
+
+If synced:
+- Playback is unpaused

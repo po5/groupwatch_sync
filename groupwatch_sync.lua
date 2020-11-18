@@ -89,6 +89,9 @@ local function groupwatch_observe(name, local_pos)
     end
     local groupwatch_pos = mp.get_time() - start
     if math.abs(groupwatch_pos - local_pos) < 0.2 then
+        if name == "manual" then
+            mp.set_property_bool("pause", false)
+        end
         sync_cancel(true)
         return mp.osd_message("[groupwatch_sync] synced")
     end
