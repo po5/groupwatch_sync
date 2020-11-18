@@ -19,6 +19,8 @@ All syncing behavior is implicit based on the current position relative to the g
 This behavior is what I think is most useful, but may be confusing without first reading this.  
 If something doesn't behave as described, please file an issue.
 
+You can prepend group position to osd messages with `show_group_pos=yes`.
+
 Setting the group watch position (`groupwatch_start`, `groupwatch_start_here`):
 - Playback is unpaused.
 
