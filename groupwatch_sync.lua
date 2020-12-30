@@ -40,7 +40,7 @@ mp.options = require "mp.options"
 mp.options.read_options(options, "groupwatch_sync")
 
 local function group_pos(pos)
-    if not options.show_group_pos then
+    if not options.show_group_pos or not start then
         return ""
     end
     if pos == nil then
