@@ -11,6 +11,7 @@ If you ever pause, press k to catch up with the group.
 Default key bindings:
 - K (shift+k) to set group watch position to the beginning of the file
 - Ctrl+k to set group watch position to the current position
+- Ctrl+Shift+k to set a start timestamp from local time
 - k to sync
 
 ## Behavior
@@ -23,6 +24,11 @@ You can prepend group position to osd messages with `show_group_pos=yes`.
 
 Setting the group watch position (`groupwatch_start`, `groupwatch_start_here`):
 - Playback is unpaused.
+
+Setting an absolute group start timestamp (`groupwatch_set_time`):
+- Existing start time is unset.
+- If start timestamp is in the past, set group position. Playback is not unpaused.
+- If start timestamp is in the future, defer setting group position to when the group starts.
 
 Pressing the `groupwatch_sync` key:
 - With no group position set: does nothing

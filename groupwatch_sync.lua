@@ -5,6 +5,7 @@
 -- This script speeds up or slows down videos to
 -- get back in sync with a group watch.
 -- Define a start time with Shift+K and sync with K.
+-- Alternatively, define a start timestamp with Ctrl+Shift+K.
 
 local options = {
     -- Prepend group position to osd messages
@@ -35,8 +36,13 @@ local reset = false
 local duration = 0
 local pause_pos = 0
 local pause_timer = nil
+local user_time = nil
+local edit_time = "hour"
+local sync_timer = nil
+local last_schedule = ""
 
 mp.options = require "mp.options"
+mp.assdraw = require "mp.assdraw"
 mp.options.read_options(options, "groupwatch_sync")
 
 local function group_pos(pos)
@@ -83,10 +89,21 @@ end
 
 local function groupwatch_reset()
     start = nil
+    user_time = nil
+    if sync_timer ~= nil then
+        sync_timer:kill()
+        sync_timer = nil
+    end
     sync_cancel()
 end
 
 local function groupwatch_start(from)
+    user_time = nil
+    last_schedule = ""
+    if sync_timer ~= nil then
+        sync_timer:kill()
+        sync_timer = nil
+    end
     from = from or 0
     mp.set_property_bool("pause", false)
     if options.show_group_pos then
@@ -98,6 +115,12 @@ local function groupwatch_start(from)
 end
 
 local function groupwatch_start_here()
+    user_time = nil
+    last_schedule = ""
+    if sync_timer ~= nil then
+        sync_timer:kill()
+        sync_timer = nil
+    end
     groupwatch_start(mp.get_property_number("time-pos"))
 end
 
@@ -184,8 +207,165 @@ local function groupwatch_sync()
     groupwatch_observe("manual", mp.get_property_number("time-pos"))
 end
 
+local function clamp_time(edit_time)
+    if edit_time == "hour" then
+        if user_time[edit_time] > 23 then
+            user_time[edit_time] = 0
+            user_time["today"] = user_time["today"] + 1
+            user_time["today"] = math.min(math.max(user_time["today"], -1), 1)
+        elseif user_time[edit_time] < 0 then
+            user_time[edit_time] = 23
+            user_time["today"] = user_time["today"] - 1
+            user_time["today"] = math.min(math.max(user_time["today"], -1), 1)
+        end
+    elseif edit_time == "today" then
+        if user_time[edit_time] < -1 then
+            user_time[edit_time] = 1
+        elseif user_time[edit_time] > 1 then
+            user_time[edit_time] = -1
+        end
+    else
+        if user_time[edit_time] > 59 then
+            user_time[edit_time] = 0
+            if edit_time == "min" then
+                user_time["hour"] = user_time["hour"] + 1
+                clamp_time("hour")
+            else
+                user_time["min"] = user_time["min"] + 1
+                clamp_time("min")
+            end
+        elseif user_time[edit_time] < 0 then
+            user_time[edit_time] = 59
+            if edit_time == "min" then
+                user_time["hour"] = user_time["hour"] - 1
+                clamp_time("hour")
+            else
+                user_time["min"] = user_time["min"] - 1
+                clamp_time("min")
+            end
+        end
+    end
+end
+
+local function groupwatch_clear_time()
+    edit_time = "hour"
+    mp.set_osd_ass(1280, 720, "")
+    mp.remove_key_binding("groupwatch_key_up")
+    mp.remove_key_binding("groupwatch_key_down")
+    mp.remove_key_binding("groupwatch_key_left")
+    mp.remove_key_binding("groupwatch_key_right")
+    mp.remove_key_binding("groupwatch_key_esc")
+    mp.remove_key_binding("groupwatch_key_enter")
+end
+
+local function groupwatch_key_up()
+    if user_time == nil then return groupwatch_clear_time() end
+    user_time[edit_time] = user_time[edit_time] + 1
+    clamp_time(edit_time)
+    groupwatch_set_time()
+end
+
+local function groupwatch_key_down()
+    if user_time == nil then return groupwatch_clear_time() end
+    user_time[edit_time] = user_time[edit_time] - 1
+    clamp_time(edit_time)
+    groupwatch_set_time()
+end
+
+local function groupwatch_key_left()
+    if user_time == nil then return groupwatch_clear_time() end
+    if edit_time == "hour" then
+        edit_time = "today"
+    elseif edit_time == "min" then
+        edit_time = "hour"
+    elseif edit_time == "sec" then
+        edit_time = "min"
+    else
+        edit_time = "sec"
+    end
+    groupwatch_set_time()
+end
+
+local function groupwatch_key_right()
+    if user_time == nil then return groupwatch_clear_time() end
+    if edit_time == "hour" then
+        edit_time = "min"
+    elseif edit_time == "min" then
+        edit_time = "sec"
+    elseif edit_time == "sec" then
+        edit_time = "today"
+    else
+        edit_time = "hour"
+    end
+    groupwatch_set_time()
+end
+
+local function groupwatch_key_esc()
+    user_time = nil
+    groupwatch_clear_time()
+end
+
+local function groupwatch_time_sync()
+    if sync_timer ~= nil then
+        sync_timer:kill()
+        sync_timer = nil
+    end
+    last_schedule = ""
+    mp.set_property_bool("pause", false)
+    if options.show_group_pos then
+        duration = mp.get_property_number("duration", 0)
+    end
+    sync_cancel()
+    start = mp.get_time()
+    mp.osd_message("[groupwatch_sync"..group_pos(0).."] start time set")
+end
+
+local function groupwatch_key_enter()
+    if user_time == nil then return groupwatch_clear_time() end
+    if sync_timer ~= nil then
+        sync_timer:kill()
+        sync_timer = nil
+    end
+    local current_time = os.time()
+    local desired_time = os.time({day=user_time.day, month=user_time.month, year=user_time.year, hour=user_time.hour, min=user_time.min, sec=user_time.sec})
+    desired_time = desired_time + (60 * 60 * 24 * user_time.today)
+
+    if current_time > desired_time then
+        groupwatch_reset()
+        last_schedule = ""
+        start = mp.get_time() + desired_time - current_time
+        mp.osd_message("[groupwatch_sync"..group_pos(current_time - desired_time).."] start time set")
+    else
+        last_schedule = string.format("%.2d:%.2d:%.2d %s", user_time.hour, user_time.min, user_time.sec, user_time.today == -1 and "yesterday" or (user_time.today == 0 and "today" or "tomorrow"))
+        groupwatch_reset()
+        sync_timer = mp.add_timeout(desired_time - current_time, groupwatch_time_sync)
+    end
+    groupwatch_clear_time()
+end
+
+function groupwatch_set_time()
+    if user_time == nil then
+        user_time = os.date("*t")
+        user_time["today"] = 0
+        edit_time = "hour"
+    end
+    local ass = mp.assdraw.ass_new()
+    ass:new_event()
+    ass:append("{\\an7\\bord3.8\\shad0\\1a&00&\\1c&FFFFFF&\\fs36}")
+    ass:pos(51, 29)
+    ass:append(string.format("set start @ local time %s%.2d{\\1c&FFFFFF&}:%s%.2d{\\1c&FFFFFF&}:%s%.2d{\\1c&FFFFFF&} (%s%s{\\1c&FFFFFF&})%s", edit_time == "hour" and "{\\1c&H008AFF&}" or "", user_time.hour, edit_time == "min" and "{\\1c&H008AFF&}" or "", user_time.min, edit_time == "sec" and "{\\1c&H008AFF&}" or "", user_time.sec, edit_time == "today" and "{\\1c&H008AFF&}" or "", user_time.today == -1 and "yesterday" or (user_time.today == 0 and "today" or "tomorrow"), sync_timer == nil and "" or " - sync scheduled for " .. last_schedule))
+    mp.add_forced_key_binding("UP", "groupwatch_key_up", groupwatch_key_up, {repeatable = true})
+    mp.add_forced_key_binding("DOWN", "groupwatch_key_down", groupwatch_key_down, {repeatable = true})
+    mp.add_forced_key_binding("LEFT", "groupwatch_key_left", groupwatch_key_left, {repeatable = true})
+    mp.add_forced_key_binding("RIGHT", "groupwatch_key_right", groupwatch_key_right, {repeatable = true})
+    mp.add_forced_key_binding("ESC", "groupwatch_key_esc", groupwatch_key_esc)
+    mp.add_forced_key_binding("ENTER", "groupwatch_key_enter", groupwatch_key_enter)
+    mp.set_osd_ass(1280, 720, ass.text)
+end
+
 mp.register_event("start-file", groupwatch_reset)
 mp.add_key_binding("Ctrl+k", "groupwatch_start_here", groupwatch_start_here)
 mp.add_key_binding("K", "groupwatch_start", groupwatch_start)
 mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
+mp.add_key_binding("Ctrl+K", "groupwatch_set_time", groupwatch_set_time)
 mp.observe_property("time-pos", "native", groupwatch_observe)
