@@ -239,7 +239,7 @@ local function increment_time(edit_time, increment)
     clamp_time(edit_time)
 end
 
-local function clamp_time(edit_time)
+function clamp_time(edit_time)
     if edit_time == "sec" then
         increment = clamp_time_with_range(edit_time, 0, 59)
         increment_time("min", increment)
