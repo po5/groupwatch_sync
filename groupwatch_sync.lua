@@ -221,43 +221,38 @@ local function groupwatch_sync()
     groupwatch_observe("manual", mp.get_property_number("time-pos"))
 end
 
-local function clamp_time(edit_time)
-    if edit_time == "hour" then
-        if user_time[edit_time] > 23 then
-            user_time[edit_time] = 0
-            user_time["today"] = user_time["today"] + 1
-            user_time["today"] = math.min(math.max(user_time["today"], -1), 1)
-        elseif user_time[edit_time] < 0 then
-            user_time[edit_time] = 23
-            user_time["today"] = user_time["today"] - 1
-            user_time["today"] = math.min(math.max(user_time["today"], -1), 1)
+local function clamp_time_with_range(edit_time, min, max)
+    if user_time[edit_time] > max then
+         user_time[edit_time] = min 
+        return 1
+    elseif user_time[edit_time] < min then
+         user_time[edit_time] = max 
+        return -1
+    end
+    return 0
+end
+
+local function increment_time(edit_time, increment)
+    user_time[edit_time] = user_time[edit_time] + increment
+    clamp_time(edit_time)
+end
+
+function clamp_time(edit_time)
+    if edit_time == "sec" then
+        increment = clamp_time_with_range(edit_time, 0, 59)
+        increment_time("min", increment)
+    elseif edit_time == "min" then
+        increment = clamp_time_with_range(edit_time, 0, 59)
+        increment_time("hour", increment)
+    elseif edit_time == "hour" then
+        increment = clamp_time_with_range(edit_time, 0, 23)
+        if not(
+            (user_time["today"] == 1 and increment > 0) or
+            (user_time["today"] == -1 and increment < 0)) then
+            increment_time("today", increment)
         end
     elseif edit_time == "today" then
-        if user_time[edit_time] < -1 then
-            user_time[edit_time] = 1
-        elseif user_time[edit_time] > 1 then
-            user_time[edit_time] = -1
-        end
-    else
-        if user_time[edit_time] > 59 then
-            user_time[edit_time] = 0
-            if edit_time == "min" then
-                user_time["hour"] = user_time["hour"] + 1
-                clamp_time("hour")
-            else
-                user_time["min"] = user_time["min"] + 1
-                clamp_time("min")
-            end
-        elseif user_time[edit_time] < 0 then
-            user_time[edit_time] = 59
-            if edit_time == "min" then
-                user_time["hour"] = user_time["hour"] - 1
-                clamp_time("hour")
-            else
-                user_time["min"] = user_time["min"] - 1
-                clamp_time("min")
-            end
-        end
+        clamp_time_with_range(edit_time, -1, 1)
     end
 end
 
@@ -274,15 +269,13 @@ end
 
 local function groupwatch_key_up()
     if user_time == nil then return groupwatch_clear_time() end
-    user_time[edit_time] = user_time[edit_time] + 1
-    clamp_time(edit_time)
+    increment_time(edit_time, 1)
     groupwatch_set_time()
 end
 
 local function groupwatch_key_down()
     if user_time == nil then return groupwatch_clear_time() end
-    user_time[edit_time] = user_time[edit_time] - 1
-    clamp_time(edit_time)
+    increment_time(edit_time, -1)
     groupwatch_set_time()
 end
 
