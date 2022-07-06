@@ -124,6 +124,20 @@ local function groupwatch_start_here()
     groupwatch_start(mp.get_property_number("time-pos"))
 end
 
+local function groupwatch_jump()
+    if not start then
+        mp.osd_message("[groupwatch_sync"..group_pos(-1).."] no start time set")
+        sync_cancel(true)
+        return
+    end
+    local groupwatch_pos = mp.get_time() - start
+    if pausing then
+        sync_cancel(true)
+    end
+    mp.set_property("time-pos", groupwatch_pos)
+    mp.osd_message("[groupwatch_sync"..group_pos(groupwatch_pos).."] synced")
+end
+
 local function groupwatch_unpause()
     if not start then return sync_cancel(true) end
     local local_pos = mp.get_property_number("time-pos")
@@ -364,7 +378,8 @@ function groupwatch_set_time()
 end
 
 mp.register_event("start-file", groupwatch_reset)
-mp.add_key_binding("Ctrl+k", "groupwatch_start_here", groupwatch_start_here)
+mp.add_key_binding(nil, "groupwatch_start_here", groupwatch_start_here)
+mp.add_key_binding("Ctrl+k", "groupwatch_jump", groupwatch_jump)
 mp.add_key_binding("K", "groupwatch_start", groupwatch_start)
 mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.add_key_binding("Ctrl+K", "groupwatch_set_time", groupwatch_set_time)
