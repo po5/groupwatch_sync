@@ -41,9 +41,6 @@ local edit_time = "hour"
 local sync_timer = nil
 local last_schedule = ""
 
--- Function 
-local clamp_time
-
 mp.options = require "mp.options"
 mp.assdraw = require "mp.assdraw"
 mp.options.read_options(options, "groupwatch_sync")
@@ -240,7 +237,7 @@ local function increment_time(edit_time, increment)
     clamp_time(edit_time)
 end
 
-clamp_time = function(edit_time)
+local function clamp_time(edit_time)
     if edit_time == "sec" then
         increment = clamp_time_with_range(edit_time, 0, 59)
         increment_time("min", increment)
