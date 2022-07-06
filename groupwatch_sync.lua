@@ -223,10 +223,12 @@ end
 
 local function clamp_time_with_range(edit_time, min, max)
     if user_time[edit_time] > max then
-        user_time[edit_time] = min
+        if edit_time == "today" then user_time[edit_time] = max
+        else user_time[edit_time] = min end
         return 1
     elseif user_time[edit_time] < min then
-        user_time[edit_time] = max
+        if edit_time == "today" then user_time[edit_time] = min
+        else user_time[edit_time] = max end
         return -1
     end
     return 0
@@ -234,9 +236,6 @@ end
 
 local function increment_time(edit_time, increment)
     user_time[edit_time] = user_time[edit_time] + increment
-
-    if edit_time == "today" then math.min(math.max(user_time[edit_time], -1), 1) end
-
     clamp_time(edit_time)
 end
 
