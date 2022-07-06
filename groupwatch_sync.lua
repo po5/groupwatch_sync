@@ -223,10 +223,12 @@ end
 
 local function clamp_time_with_range(edit_time, min, max)
     if user_time[edit_time] > max then
-        user_time[edit_time] = min
+        if edit_time == "today" then user_time[edit_time] = max
+        else user_time[edit_time] = min end
         return 1
     elseif user_time[edit_time] < min then
-        user_time[edit_time] = max
+        if edit_time == "today" then user_time[edit_time] = min
+        else user_time[edit_time] = max end
         return -1
     end
     return 0
