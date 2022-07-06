@@ -1,18 +1,18 @@
 # groupwatch_sync
-Quickly get back in sync with a group watch by adjusting playback speed.
+Automatically start and get back in sync with a group watch by adjusting playback speed.
 
 ## Installation
 Place groupwatch_sync.lua in your mpv `scripts` folder.
 
 ## Usage
-Set the group watch position at the start of the viewing.  
-If you ever pause, press k to catch up with the group.
+Set the group watch position at the beginning of the viewing.  
+Press k at any time to sync up with the group.
 
 Default key bindings:
-- K (shift+k) to set group watch position to the beginning of the file
-- Ctrl+k to set group watch position to the current position
+- k to sync by adjusting playback speed
+- Ctrl+k to sync by jumping to group watch position
+- Shift+k to set group watch position to the current playback time
 - Ctrl+Shift+k to set a start timestamp from local time
-- k to sync
 
 ## Behavior
 

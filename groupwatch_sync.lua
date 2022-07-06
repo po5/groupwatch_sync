@@ -378,9 +378,9 @@ function groupwatch_set_time()
 end
 
 mp.register_event("start-file", groupwatch_reset)
-mp.add_key_binding(nil, "groupwatch_start_here", groupwatch_start_here)
+mp.add_key_binding(nil, "groupwatch_start", groupwatch_start)
 mp.add_key_binding("Ctrl+k", "groupwatch_jump", groupwatch_jump)
-mp.add_key_binding("K", "groupwatch_start", groupwatch_start)
+mp.add_key_binding("K", "groupwatch_start_here", groupwatch_start_here)
 mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.add_key_binding("Ctrl+K", "groupwatch_set_time", groupwatch_set_time)
 mp.observe_property("time-pos", "native", groupwatch_observe)
