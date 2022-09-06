@@ -50,3 +50,8 @@ In both cases:
 
 If synced:
 - Playback is unpaused
+
+Pressing the `groupwatch_jump` key:
+- Any ongoing syncs are canceled
+- Playback position is set to group position
+- Playback is unpaused
