@@ -136,6 +136,9 @@ local function groupwatch_jump()
     end
     mp.set_property("time-pos", groupwatch_pos)
     mp.osd_message("[groupwatch_sync"..group_pos(groupwatch_pos).."] synced")
+    if not pausing then
+        mp.set_property_bool("pause", false)
+    end
 end
 
 local function groupwatch_unpause()
