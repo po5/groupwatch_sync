@@ -397,6 +397,23 @@ mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.add_key_binding("Ctrl+K", "groupwatch_set_time", groupwatch_set_time)
 mp.observe_property("time-pos", "native", groupwatch_observe)
 
+mp.register_script_message("start-time", function(timestamp)
+    timestamp = tonumber(timestamp) or 0
+    if timestamp == 0 then return end
+    local from = os.time() + mp.get_property_number("time-pos", 0) - timestamp
+    if from < 0 then
+        local today = tonumber(os.date("%Y%m%d"))
+        local time = os.date("*t", timestamp)
+        local time_day = tonumber(string.format("%.2d%.2d%.2d", time.year, time.month, time.day))
+        last_schedule = string.format("%.2d:%.2d:%.2d %s", time.hour, time.min, time.sec, today > time_day and "yesterday" or (today == time_day and "today" or "tomorrow"))
+        groupwatch_reset()
+        sync_timer = mp.add_timeout(-from, groupwatch_time_sync)
+        mp.osd_message("[groupwatch_sync"..group_pos(-1).."] start scheduled for " .. last_schedule)
+    else
+        groupwatch_start(from)
+    end
+end)
+
 mp.register_script_message("evafast-version", function(version)
     evafast_available = true
 end)
