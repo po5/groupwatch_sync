@@ -406,7 +406,7 @@ mp.register_script_message("start-time", function(timestamp)
     user_time = nil
     last_schedule = ""
     if timestamp == 0 then return end
-    local from = os.time() + mp.get_property_number("time-pos", 0) - timestamp
+    local from = os.time() - timestamp
     if from < 0 then
         local today = tonumber(os.date("%Y%m%d"))
         local time = os.date("*t", timestamp)
