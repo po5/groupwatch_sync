@@ -283,6 +283,8 @@ local function groupwatch_clear_time()
     mp.remove_key_binding("groupwatch_key_right")
     mp.remove_key_binding("groupwatch_key_esc")
     mp.remove_key_binding("groupwatch_key_enter")
+    mp.remove_key_binding("groupwatch_paste")
+    mp.remove_key_binding("groupwatch_paste2")
 end
 
 local function groupwatch_key_up()
@@ -369,6 +371,12 @@ local function groupwatch_key_enter()
     groupwatch_clear_time()
 end
 
+local function groupwatch_paste()
+    groupwatch_clear_time()
+    -- TODO: use mpv-user-input if available
+    mp.commandv("script-message-to", "console", "type", "script-message-to " .. mp.get_script_name() .. " start-time ")
+end
+
 function groupwatch_set_time()
     if user_time == nil then
         user_time = os.date("*t")
@@ -386,6 +394,8 @@ function groupwatch_set_time()
     mp.add_forced_key_binding("RIGHT", "groupwatch_key_right", groupwatch_key_right, {repeatable = true})
     mp.add_forced_key_binding("ESC", "groupwatch_key_esc", groupwatch_key_esc)
     mp.add_forced_key_binding("ENTER", "groupwatch_key_enter", groupwatch_key_enter)
+    mp.add_forced_key_binding("CTRL+v", "groupwatch_paste", groupwatch_paste)
+    mp.add_forced_key_binding("META+v", "groupwatch_paste2", groupwatch_paste)
     mp.set_osd_ass(1280, 720, ass.text)
 end
 
