@@ -134,7 +134,7 @@ end
 
 local function groupwatch_jump()
     if not start then
-        mp.osd_message("[groupwatch_sync"..group_pos(-1).."] no start time set")
+        mp.osd_message("[groupwatch_sync"..group_pos(-1).."] " .. (last_schedule ~= "" and ("waiting for group - start scheduled for " .. last_schedule) or "no start time set"))
         sync_cancel(true)
         return
     end
@@ -233,7 +233,7 @@ local function groupwatch_sync()
     if syncing then
         return sync_cancel()
     elseif not start then
-        return mp.osd_message("[groupwatch_sync"..group_pos(-1).."] no start time set")
+        return mp.osd_message("[groupwatch_sync"..group_pos(-1).."] " .. (last_schedule ~= "" and ("waiting for group - start scheduled for " .. last_schedule) or "no start time set"))
     end
     syncing = true
     groupwatch_observe("manual", mp.get_property_number("time-pos"))
@@ -364,6 +364,7 @@ local function groupwatch_key_enter()
         last_schedule = string.format("%.2d:%.2d:%.2d %s", user_time.hour, user_time.min, user_time.sec, user_time.today == -1 and "yesterday" or (user_time.today == 0 and "today" or "tomorrow"))
         groupwatch_reset()
         sync_timer = mp.add_timeout(desired_time - current_time, groupwatch_time_sync)
+        mp.osd_message("[groupwatch_sync"..group_pos(-1).."] start scheduled for " .. last_schedule)
     end
     groupwatch_clear_time()
 end
