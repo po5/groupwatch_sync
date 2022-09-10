@@ -399,6 +399,12 @@ mp.observe_property("time-pos", "native", groupwatch_observe)
 
 mp.register_script_message("start-time", function(timestamp)
     timestamp = tonumber(timestamp) or 0
+    if sync_timer ~= nil then
+        sync_timer:kill()
+        sync_timer = nil
+    end
+    user_time = nil
+    last_schedule = ""
     if timestamp == 0 then return end
     local from = os.time() + mp.get_property_number("time-pos", 0) - timestamp
     if from < 0 then
