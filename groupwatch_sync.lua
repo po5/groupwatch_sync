@@ -9,7 +9,7 @@
 
 local options = {
     -- Prepend group position to osd messages
-    show_group_pos = false,
+    show_group_pos = true,
 
     -- Slow down playback instead of pausing when ahead
     allow_slowdowns = false,
