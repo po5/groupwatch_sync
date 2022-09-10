@@ -23,7 +23,10 @@ local options = {
     max_speed = 2.5,
 
     -- Reset playback speed to 1x when subtitles are displayed
-    subs_reset_speed = false
+    subs_reset_speed = false,
+
+    -- Use evafast for speedup syncing if available
+    use_evafast = true
 }
 
 local start = nil
@@ -40,6 +43,7 @@ local user_time = nil
 local edit_time = "hour"
 local sync_timer = nil
 local last_schedule = ""
+local evafast_available = false
 
 mp.options = require "mp.options"
 mp.assdraw = require "mp.assdraw"
@@ -81,7 +85,11 @@ local function sync_cancel(quiet, observed)
     end
     syncing = false
     pausing = false
-    mp.set_property("speed", 1)
+    if evafast_available then
+        mp.commandv("script-message-to", "evafast", "speedup-target", 0)
+    else
+        mp.set_property("speed", 1)
+    end
     if not quiet then
         mp.osd_message("[groupwatch_sync"..group_pos(nil).."] sync canceled")
     end
@@ -133,6 +141,8 @@ local function groupwatch_jump()
     local groupwatch_pos = mp.get_time() - start
     if pausing then
         sync_cancel(true)
+    elseif evafast_available then
+        mp.commandv("script-message-to", "evafast", "speedup-target", 0)
     end
     mp.set_property("time-pos", groupwatch_pos)
     mp.osd_message("[groupwatch_sync"..group_pos(groupwatch_pos).."] synced")
@@ -192,6 +202,11 @@ local function groupwatch_observe(name, local_pos)
     end
     if name == "manual" then
         mp.set_property_bool("pause", false)
+    end
+    if evafast_available then
+        mp.osd_message("[groupwatch_sync"..group_pos(groupwatch_pos).."] syncing... (speed correction)")
+        expect_jump = true
+        return mp.commandv("script-message-to", "evafast", "speedup-target", groupwatch_pos)
     end
     if options.subs_reset_speed then
         if mp.get_property("sub-start") ~= nil then
@@ -380,3 +395,11 @@ mp.add_key_binding("K", "groupwatch_start_here", groupwatch_start_here)
 mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.add_key_binding("Ctrl+K", "groupwatch_set_time", groupwatch_set_time)
 mp.observe_property("time-pos", "native", groupwatch_observe)
+
+mp.register_script_message("evafast-version", function(version)
+    evafast_available = true
+end)
+
+if options.use_evafast then
+    mp.commandv("script-message-to", "evafast", "get-version", mp.get_script_name())
+end
