@@ -73,6 +73,7 @@ local function group_pos_update()
         return
     end
     pause_pos = pause_pos + 1
+    -- TODO: support groupwatch_start(n, true, true) in the middle of a pause sync
     mp.osd_message("[groupwatch_sync"..group_pos(pause_pos).."] syncing... (pause)", mp.get_property_number("time-pos") - pause_pos + 1)
 end
 
@@ -105,21 +106,25 @@ local function groupwatch_reset()
     sync_cancel()
 end
 
-local function groupwatch_start(from)
+local function groupwatch_start(from, quiet, ignore)
     user_time = nil
     last_schedule = ""
-    if sync_timer ~= nil then
-        sync_timer:kill()
-        sync_timer = nil
+    if not ignore then
+        if sync_timer ~= nil then
+            sync_timer:kill()
+            sync_timer = nil
+        end
+        from = from or 0
+        mp.set_property_bool("pause", false)
+        if options.show_group_pos then
+            duration = mp.get_property_number("duration", 0)
+        end
+        sync_cancel()
     end
-    from = from or 0
-    mp.set_property_bool("pause", false)
-    if options.show_group_pos then
-        duration = mp.get_property_number("duration", 0)
-    end
-    sync_cancel()
     start = mp.get_time() - from
-    mp.osd_message("[groupwatch_sync"..group_pos(from).."] start time set")
+    if not quiet then
+        mp.osd_message("[groupwatch_sync"..group_pos(from).."] start time set")
+    end
 end
 
 local function groupwatch_start_here()
@@ -407,8 +412,10 @@ mp.add_key_binding("k", "groupwatch_sync", groupwatch_sync)
 mp.add_key_binding("Ctrl+K", "groupwatch_set_time", groupwatch_set_time)
 mp.observe_property("time-pos", "native", groupwatch_observe)
 
-mp.register_script_message("start-time", function(timestamp)
+mp.register_script_message("start-time", function(timestamp, quiet, ignore)
     timestamp = tonumber(timestamp) or 0
+    quiet = tonumber(quiet) == 1
+    ignore = tonumber(ignore) == 1
     if sync_timer ~= nil then
         sync_timer:kill()
         sync_timer = nil
@@ -422,11 +429,15 @@ mp.register_script_message("start-time", function(timestamp)
         local time = os.date("*t", timestamp)
         local time_day = tonumber(string.format("%.2d%.2d%.2d", time.year, time.month, time.day))
         last_schedule = string.format("%.2d:%.2d:%.2d %s", time.hour, time.min, time.sec, today > time_day and "yesterday" or (today == time_day and "today" or "tomorrow"))
-        groupwatch_reset()
+        if not ignore then
+            groupwatch_reset()
+        end
         sync_timer = mp.add_timeout(-from, groupwatch_time_sync)
-        mp.osd_message("[groupwatch_sync"..group_pos(-1).."] start scheduled for " .. last_schedule)
+        if not quiet then
+            mp.osd_message("[groupwatch_sync"..group_pos(-1).."] start scheduled for " .. last_schedule)
+        end
     else
-        groupwatch_start(from)
+        groupwatch_start(from, quiet, ignore)
     end
 end)
 
